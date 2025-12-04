@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\CompanyConfigController;
 use App\Http\Controllers\CompanyPermissionController;
+use App\Http\Controllers\DriverController;
 use App\Http\Controllers\PartnerController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -36,6 +37,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('partners', PartnerController::class)
         ->only(['index', 'store', 'show', 'update', 'destroy']);
+
+    Route::apiResource('drivers', DriverController::class);
 
     Route::get('/tenant-example', function (Request $request) {
         return response()->json([
