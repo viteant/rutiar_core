@@ -1,13 +1,12 @@
 <?php
 
-namespace Tests\Feature;
+namespace Auth;
 
 use App\Enums\UserRole;
 use App\Mail\CompanyAdminInvitationMail;
 use App\Models\Company;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;

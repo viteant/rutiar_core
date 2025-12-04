@@ -7,6 +7,7 @@ use App\Enums\UserRole;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -75,6 +76,21 @@ class User extends Authenticatable
         return $this->belongsTo(Company::class);
     }
 
+    public function userPermissions(): HasMany
+    {
+        return $this->hasMany(UserPermission::class);
+    }
+
+    /**
+     * Role-based permissions for this user's role and company.
+     */
+    public function rolePermissions(): HasMany
+    {
+        return $this->hasMany(RolePermission::class, 'role', 'role')
+            ->where('company_id', $this->company_id);
+    }
+
+
     public function partner(): BelongsTo
     {
         return $this->belongsTo(Partner::class);
@@ -83,5 +99,49 @@ class User extends Authenticatable
     public function isSuperAdmin(): bool
     {
         return $this->role === UserRole::SUPERADMIN;
+    }
+
+    /**
+     * Check if user has given permission name.
+     *
+     * Resolution order:
+     * 1) User-specific permissions (user_permissions)
+     * 2) Role-based permissions (role_permissions)
+     * 3) Deny by default
+     *
+     * SUPERADMIN always returns true.
+     */
+    public function hasPermission(string $permissionName): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        if (!$this->company_id) {
+            return false;
+        }
+
+        $companyId = $this->company_id;
+
+        // 1) User-specific override
+        $hasUserPermission = $this->userPermissions()
+            ->where('company_id', $companyId)
+            ->whereHas('permission', function ($query) use ($permissionName) {
+                $query->where('name', $permissionName);
+            })
+            ->exists();
+
+        if ($hasUserPermission) {
+            return true;
+        }
+
+        // 2) Role-based permission
+        return RolePermission::query()
+            ->where('company_id', $companyId)
+            ->where('role', $this->role->value)
+            ->whereHas('permission', function ($query) use ($permissionName) {
+                $query->where('name', $permissionName);
+            })
+            ->exists();
     }
 }
