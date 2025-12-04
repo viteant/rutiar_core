@@ -66,7 +66,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'must_change_password' => 'boolean',
-            'roles' => UserRole::class
+            'role' => UserRole::class
         ];
     }
 
@@ -82,6 +82,6 @@ class User extends Authenticatable
 
     public function isSuperAdmin(): bool
     {
-        return $this->role === UserRole::SUPERADMIN->value;
+        return $this->role === UserRole::SUPERADMIN;
     }
 }

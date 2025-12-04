@@ -12,27 +12,26 @@ class EnsurePasswordIsChanged
     {
         $user = $request->user();
 
+        // No autenticado → no aplica
         if (! $user) {
             return $next($request);
         }
 
+        // Usuario que ya cambió contraseña → vida normal
         if (! $user->must_change_password) {
             return $next($request);
         }
 
-        $route = $request->route();
-        $routeName = $route?->getName();
-
-        $allowedRoutes = [
-            'auth.me',
-            'auth.logout',
-            'auth.change-password',
-        ];
-
-        if ($routeName && in_array($routeName, $allowedRoutes, true)) {
+        // Rutas que SÍ se permiten aunque falte cambiar contraseña
+        // Path real incluye "api/"
+        if ($request->is('api/auth/me')
+            || $request->is('api/auth/logout')
+            || $request->is('api/auth/change-password')
+        ) {
             return $next($request);
         }
 
+        // Todo lo demás bloqueado
         return response()->json([
             'message' => 'Debes cambiar tu contraseña antes de continuar.',
             'code' => 'PASSWORD_CHANGE_REQUIRED',
