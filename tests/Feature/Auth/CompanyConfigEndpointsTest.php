@@ -40,8 +40,8 @@ class CompanyConfigEndpointsTest extends TestCase
             'company_id' => $company->id,
             'planning_cutoff_time' => '18:00:00',
             'default_waiting_minutes' => 5,
-            'max_drivers_per_partner' => 0,
             'allow_driver_reorder' => true,
+            'driver_quota_default' => 30,
             'settings' => [],
         ]);
 
@@ -53,8 +53,8 @@ class CompanyConfigEndpointsTest extends TestCase
         $response->assertJsonFragment([
             'planning_cutoff_time' => '18:00:00',
             'default_waiting_minutes' => 5,
-            'max_drivers_per_partner' => 0,
             'allow_driver_reorder' => true,
+            'driver_quota_default' => 30,
         ]);
     }
 
@@ -103,8 +103,8 @@ class CompanyConfigEndpointsTest extends TestCase
             'company_id' => $company->id,
             'planning_cutoff_time' => '18:00:00',
             'default_waiting_minutes' => 5,
-            'max_drivers_per_partner' => 0,
             'allow_driver_reorder' => true,
+            'driver_quota_default' => 30,
             'settings' => [],
         ]);
 
@@ -113,8 +113,8 @@ class CompanyConfigEndpointsTest extends TestCase
         $response = $this->putJson('/api/company/config', [
             'planning_cutoff_time' => '19:30',
             'default_waiting_minutes' => 10,
-            'max_drivers_per_partner' => 20,
             'allow_driver_reorder' => false,
+            'driver_quota_default' => 40,
         ]);
 
         $response->assertOk();
@@ -123,8 +123,8 @@ class CompanyConfigEndpointsTest extends TestCase
             'company_id' => $company->id,
             'planning_cutoff_time' => '19:30:00',
             'default_waiting_minutes' => 10,
-            'max_drivers_per_partner' => 20,
             'allow_driver_reorder' => false,
+            'driver_quota_default' => 40,
         ]);
     }
 

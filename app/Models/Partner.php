@@ -44,6 +44,11 @@ class Partner extends Model
         return $this->belongsTo(Company::class);
     }
 
+    public function drivers(): HasMany
+    {
+        return $this->hasMany(Driver::class);
+    }
+
     public function users(): HasMany
     {
         return $this->hasMany(User::class);

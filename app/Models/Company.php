@@ -39,6 +39,11 @@ class Company extends Model
         return $this->hasMany(Partner::class);
     }
 
+    public function drivers(): HasMany
+    {
+        return $this->hasMany(Driver::class);
+    }
+
     public function config(): HasOne
     {
         return $this->hasOne(CompanyConfig::class);
