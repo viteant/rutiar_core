@@ -5,7 +5,9 @@ namespace App\Console\Commands;
 use App\Enums\UserRole;
 use App\Mail\CompanyAdminInvitationMail;
 use App\Models\Company;
+use App\Models\CompanyConfig;
 use App\Models\User;
+use App\Services\RolePermissionSyncService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -17,6 +19,12 @@ class CreateCompanyAdmin extends Command
     protected $signature = 'rutiar:create-company-admin';
 
     protected $description = 'Crea una compañía y un usuario COMPANY_ADMIN con contraseña temporal';
+
+    public function __construct(
+        protected RolePermissionSyncService $rolePermissionSyncService
+    ) {
+        parent::__construct();
+    }
 
     public function handle(): int
     {
@@ -70,6 +78,15 @@ class CreateCompanyAdmin extends Command
                 'is_active' => true,
             ]);
 
+            CompanyConfig::create([
+                'company_id' => $company->id,
+                'planning_cutoff_time' => '18:00:00',
+                'default_waiting_minutes' => 5,
+                'max_drivers_per_partner' => 0,
+                'allow_driver_reorder' => true,
+                'settings' => [],
+            ]);
+
             /** @var User $user */
             $user = User::create([
                 'name' => $adminName,
@@ -81,12 +98,14 @@ class CreateCompanyAdmin extends Command
                 'must_change_password' => true,
             ]);
 
+            $this->rolePermissionSyncService->syncForCompany($company);
 
             Mail::to($user->email)->send(
                 new CompanyAdminInvitationMail($company, $user, $temporaryPassword)
             );
 
             DB::commit();
+
 
             $this->newLine();
             $this->info('Compañía y usuario COMPANY_ADMIN creados correctamente.');

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * @mixin Builder
@@ -36,5 +37,10 @@ class Company extends Model
     public function partners(): HasMany
     {
         return $this->hasMany(Partner::class);
+    }
+
+    public function config(): HasOne
+    {
+        return $this->hasOne(CompanyConfig::class);
     }
 }
