@@ -13,8 +13,6 @@ use Illuminate\Http\Request;
 
 class CompanyConfigController extends Controller
 {
-    use AuthorizesRequests;
-    use ValidatesRequests;
 
     /**
      * @throws AuthorizationException

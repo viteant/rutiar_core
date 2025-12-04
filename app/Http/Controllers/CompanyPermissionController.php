@@ -15,8 +15,6 @@ use Illuminate\Foundation\Validation\ValidatesRequests;
 
 class CompanyPermissionController extends Controller
 {
-    use AuthorizesRequests;
-    use ValidatesRequests;
 
     /**
      * List all available permissions in the system.

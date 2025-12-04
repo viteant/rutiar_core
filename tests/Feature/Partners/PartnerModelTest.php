@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature;
+namespace Partners;
 
 use App\Models\Company;
 use App\Models\Partner;

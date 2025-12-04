@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\CompanyConfigController;
 use App\Http\Controllers\CompanyPermissionController;
+use App\Http\Controllers\PartnerController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -32,6 +33,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('users/{userId}', [CompanyPermissionController::class, 'showUserPermissions']);
         Route::put('users/{userId}', [CompanyPermissionController::class, 'updateUserPermissions']);
     });
+
+    Route::apiResource('partners', PartnerController::class)
+        ->only(['index', 'store', 'show', 'update', 'destroy']);
 
     Route::get('/tenant-example', function (Request $request) {
         return response()->json([
