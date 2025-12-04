@@ -35,6 +35,11 @@ return [
             'update_driver',
             'deactivate_driver',
 
+            'view_vehicles',
+            'create_vehicle',
+            'update_vehicle',
+            'deactivate_vehicle',
+
             'view_route_definitions',
             'create_route_definition',
             'update_route_definition',
@@ -69,6 +74,11 @@ return [
             'create_driver',
             'update_driver',
             'deactivate_driver',
+
+            'view_vehicles',
+            'create_vehicle',
+            'update_vehicle',
+            'deactivate_vehicle',
 
             'view_route_definitions',
             'create_route_definition',
@@ -108,6 +118,11 @@ return [
             'view_drivers',
             'create_driver',
             'update_driver',
+
+            'view_vehicles',
+            'create_vehicle',
+            'update_vehicle',
+            'deactivate_vehicle',
 
             'view_route_definitions',  // Ver rutas relevantes
             'view_runs',

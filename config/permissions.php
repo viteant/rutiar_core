@@ -131,5 +131,23 @@ return [
             'name' => 'manage_company_user_permissions',
             'description' => 'Manage user-specific permissions for this company.',
         ],
+
+        // Vehicles
+        [
+            'name' => 'view_vehicles',
+            'description' => 'View vehicles list and details.',
+        ],
+        [
+            'name' => 'create_vehicle',
+            'description' => 'Create new vehicles.',
+        ],
+        [
+            'name' => 'update_vehicle',
+            'description' => 'Edit vehicle information.',
+        ],
+        [
+            'name' => 'deactivate_vehicle',
+            'description' => 'Deactivate vehicles (soft delete).',
+        ],
     ],
 ];
