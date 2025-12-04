@@ -10,10 +10,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @mixin Builder
- * @property int company_id
- * @property string name
- * @property string code
- * @property boolean is_active
+ * @property int $id
+ * @property int $company_id
+ * @property string $name
+ * @property string $code
+ * @property boolean $is_active
+ * @property integer $tax_id
+ * @property integer $driver_quota
  */
 class Partner extends Model
 {
@@ -23,8 +26,18 @@ class Partner extends Model
         'company_id',
         'name',
         'code',
+        'tax_id',
         'is_active',
+        'driver_quota'
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'driver_quota' => 'integer',
+            'is_active' => 'boolean',
+        ];
+    }
 
     public function company(): BelongsTo
     {
