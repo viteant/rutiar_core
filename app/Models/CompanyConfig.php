@@ -27,6 +27,7 @@ class CompanyConfig extends Model
         'planning_cutoff_time',
         'default_waiting_minutes',
         'max_drivers_per_partner',
+        'driver_quota_default',
         'allow_driver_reorder',
         'settings',
     ];
@@ -37,6 +38,7 @@ class CompanyConfig extends Model
             'planning_cutoff_time' => 'datetime:H:i:s',
             'default_waiting_minutes' => 'integer',
             'max_drivers_per_partner' => 'integer',
+            'driver_quota_default' => 'integer',
             'allow_driver_reorder' => 'boolean',
             'settings' => 'array',
         ];

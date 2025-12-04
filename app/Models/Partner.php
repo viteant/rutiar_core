@@ -48,4 +48,19 @@ class Partner extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    public function effectiveDriverQuota(): ?int
+    {
+        if ($this->driver_quota !== null) {
+            return $this->driver_quota;
+        }
+
+        $company = $this->company;
+
+        if (!$company || !$company->config) {
+            return null;
+        }
+
+        return $company->config->driver_quota_default;
+    }
 }
