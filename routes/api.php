@@ -3,8 +3,10 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\CompanyConfigController;
 use App\Http\Controllers\CompanyPermissionController;
+use App\Http\Controllers\CorporateController;
 use App\Http\Controllers\DriverController;
 use App\Http\Controllers\PartnerController;
+use App\Http\Controllers\PassengerController;
 use App\Http\Controllers\VehicleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -41,6 +43,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('drivers', DriverController::class);
     Route::apiResource('vehicles', VehicleController::class);
+    Route::apiResource('corporates', CorporateController::class);
+    Route::apiResource('passengers', PassengerController::class);
 
     Route::get('/tenant-example', function (Request $request) {
         return response()->json([

@@ -40,6 +40,16 @@ return [
             'update_vehicle',
             'deactivate_vehicle',
 
+            'view_corporates',
+            'create_corporate',
+            'update_corporate',
+            'deactivate_corporate',
+
+            'view_passengers',
+            'create_passenger',
+            'update_passenger',
+            'deactivate_passenger',
+
             'view_route_definitions',
             'create_route_definition',
             'update_route_definition',
@@ -80,6 +90,16 @@ return [
             'update_vehicle',
             'deactivate_vehicle',
 
+            'view_corporates',
+            'create_corporate',
+            'update_corporate',
+            'deactivate_corporate',
+
+            'view_passengers',
+            'create_passenger',
+            'update_passenger',
+            'deactivate_passenger',
+
             'view_route_definitions',
             'create_route_definition',
             'update_route_definition',
@@ -102,6 +122,8 @@ return [
         'COMPANY_USER' => [
             'view_partners',
             'view_drivers',
+            'view_corporates',
+            'view_passengers',
 
             'view_route_definitions',
 

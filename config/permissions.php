@@ -149,5 +149,41 @@ return [
             'name' => 'deactivate_vehicle',
             'description' => 'Deactivate vehicles (soft delete).',
         ],
+
+        // Corporates (clientes corporativos)
+        [
+            'name' => 'view_corporates',
+            'description' => 'View corporates list and details.',
+        ],
+        [
+            'name' => 'create_corporate',
+            'description' => 'Create new corporates.',
+        ],
+        [
+            'name' => 'update_corporate',
+            'description' => 'Edit corporate information.',
+        ],
+        [
+            'name' => 'deactivate_corporate',
+            'description' => 'Deactivate corporates (soft delete).',
+        ],
+
+        // Passengers
+        [
+            'name' => 'view_passengers',
+            'description' => 'View passengers list and details.',
+        ],
+        [
+            'name' => 'create_passenger',
+            'description' => 'Create new passengers.',
+        ],
+        [
+            'name' => 'update_passenger',
+            'description' => 'Edit passenger information.',
+        ],
+        [
+            'name' => 'deactivate_passenger',
+            'description' => 'Deactivate passengers (soft delete).',
+        ],
     ],
 ];
