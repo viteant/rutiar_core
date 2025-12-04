@@ -165,15 +165,15 @@ class PartnerController extends Controller
         ]);
     }
 
-    public function destroy(Partner $partner, Request $request): JsonResponse
+    public function destroy(Request $request, Partner $partner): JsonResponse
     {
-        /** @var User $user */
-        $user = $request->user();
-
         $this->authorize('delete', $partner);
 
-        $partner->delete();
+        if ($partner->is_active) {
+            $partner->is_active = false;
+            $partner->save();
+        }
 
-        return response()->json([], 204);
+        return response()->json(null, 204);
     }
 }
