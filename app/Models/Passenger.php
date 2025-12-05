@@ -7,6 +7,7 @@ use App\Models\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Passenger extends Model
 {
@@ -44,5 +45,10 @@ class Passenger extends Model
     public function corporate(): BelongsTo
     {
         return $this->belongsTo(Corporate::class);
+    }
+
+    public function routeDefinitionPassengers(): HasMany
+    {
+        return $this->hasMany(RouteDefinitionPassenger::class);
     }
 }

@@ -19,8 +19,6 @@ return [
     'defaults' => [
 
         'SUPERADMIN' => [
-            // Nota: SUPERADMIN ignora esto en runtime (hasPermission siempre true),
-            // pero lo dejamos por coherencia si algún día quieres verlos en UI.
             'view_company_settings',
             'update_company_settings',
 
@@ -50,10 +48,15 @@ return [
             'update_passenger',
             'deactivate_passenger',
 
+            'view_routes',
+            'create_route',
+            'update_route',
+            'deactivate_route',
+
             'view_route_definitions',
             'create_route_definition',
             'update_route_definition',
-            'delete_route_definition',
+            'deactivate_route_definition',
 
             'view_runs',
             'approve_run',
@@ -100,10 +103,15 @@ return [
             'update_passenger',
             'deactivate_passenger',
 
+            'view_routes',
+            'create_route',
+            'update_route',
+            'deactivate_route',
+
             'view_route_definitions',
             'create_route_definition',
             'update_route_definition',
-            'delete_route_definition',
+            'deactivate_route_definition',
 
             'view_runs',
             'approve_run',
@@ -125,7 +133,13 @@ return [
             'view_corporates',
             'view_passengers',
 
+            'view_routes',
+            'create_route',
+            'update_route',
+
             'view_route_definitions',
+            'create_route_definition',
+            'update_route_definition',
 
             'view_runs',
 
@@ -136,7 +150,7 @@ return [
         ],
 
         'PARTNER_ADMIN' => [
-            'view_partners',           // Ver datos de su propio partner (policy luego filtra)
+            'view_partners',
             'view_drivers',
             'create_driver',
             'update_driver',
@@ -146,16 +160,17 @@ return [
             'update_vehicle',
             'deactivate_vehicle',
 
-            'view_route_definitions',  // Ver rutas relevantes
+            'view_routes',
+
+            'view_route_definitions',
+
             'view_runs',
 
             'view_manifests',
         ],
 
         'DRIVER' => [
-            // En principio, cero permisos de panel web.
-            // La app móvil se validará por endpoints específicos y policies
-            // que impondrán restricciones adicionales (ej: solo sus propios runs).
+            // No web panel permissions. Mobile endpoints will use policies.
         ],
     ],
 ];

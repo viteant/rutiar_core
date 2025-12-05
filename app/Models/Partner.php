@@ -70,4 +70,9 @@ class Partner extends Model
 
         return $company->config->driver_quota_default;
     }
+
+    public function routeDefinitions(): HasMany
+    {
+        return $this->hasMany(RouteDefinition::class);
+    }
 }

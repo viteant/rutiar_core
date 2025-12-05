@@ -49,11 +49,28 @@ abstract class BaseApiController extends Controller
         return $this->user()->isSuperAdmin();
     }
 
-    protected function withCompanyId(array $data): array
+    /**
+     * Injects the correct company_id into the payload based on the current user / tenant.
+     *
+     * For superadmin:
+     *  - If company_id is present in $data, it is used as-is (already validated).
+     *  - If company_id is missing and $fallbackCompanyId is provided, it will be used.
+     *  - If both are missing, a 422 error is thrown.
+     *
+     * For normal users:
+     *  - company_id is always forced from the resolved tenant.
+     *
+     * @param array<string, mixed> $data
+     */
+    protected function withCompanyId(array $data, ?int $fallbackCompanyId = null): array
     {
         if ($this->isSuperAdmin()) {
             if (! isset($data['company_id'])) {
-                abort(422, 'company_id is required for superadmin operations.');
+                if ($fallbackCompanyId !== null) {
+                    $data['company_id'] = $fallbackCompanyId;
+                } else {
+                    abort(422, 'company_id is required for superadmin operations.');
+                }
             }
 
             return $data;
@@ -69,4 +86,6 @@ abstract class BaseApiController extends Controller
     {
         return response()->json(null, 204);
     }
+
+
 }
