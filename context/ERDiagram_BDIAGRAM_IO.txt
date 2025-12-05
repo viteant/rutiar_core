@@ -1,0 +1,349 @@
+Project Rutiar_MVP {
+  database_type: "PostgreSQL"
+}
+
+/*************************************
+ * ENUMS
+ *************************************/
+
+Enum user_role {
+  SUPERADMIN
+  COMPANY_ADMIN
+  COMPANY_USER
+  PARTNER_ADMIN
+  DRIVER
+}
+
+Enum run_direction {
+  INBOUND      // Entrada
+  OUTBOUND     // Salida
+}
+
+Enum run_status {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+Enum actor_source {
+  ADMIN
+  PARTNER
+  DRIVER
+}
+
+Enum event_type {
+  RUN_START
+  RUN_END
+  ARRIVAL        // llegada a punto de recogida
+  BOARD          // pasajero sube
+  NO_SHOW        // pasajero no se presenta
+  DROPOFF        // pasajero baja
+  INCIDENT       // incidente reportado
+}
+
+Enum incident_type {
+  TRAFFIC
+  MECHANICAL_FAILURE
+  ACCIDENT
+  SECURITY
+  OTHER
+}
+
+/*************************************
+ * NIVEL COMPAÑÍA (TENANT)
+ * (IMPLEMENTADO)
+ *************************************/
+
+Table companies {
+  id          bigserial [pk]
+  name        varchar(150)
+  code        varchar(50) [unique, note: 'Identificador interno para login multi-tenant']
+  country     varchar(100) [note: 'Opcional']
+  timezone    varchar(50) [note: 'Default: America/Guayaquil']
+  is_active   boolean [note: 'Compañía activa/inactiva']
+
+  created_at  timestamp
+  updated_at  timestamp
+}
+
+Table company_configs {
+  id                       bigserial [pk]
+  company_id               bigint [not null, ref: > companies.id]
+
+  planning_cutoff_time     time        [note: 'Hora límite de aprobación diaria']
+  default_waiting_minutes  int         [note: 'Minutos estándar de espera por pasajero']
+  allow_driver_reorder     boolean     [note: 'Permitir que el conductor reordene en la app']
+  driver_quota_default     int         [note: 'Cupo por socio por defecto a nivel compañía']
+
+  settings                 jsonb       [note: 'Configuraciones adicionales específicas del tenant']
+
+  created_at               timestamp
+  updated_at               timestamp
+}
+
+/*************************************
+ * PERMISOS / RBAC
+ * (IMPLEMENTADO A NIVEL LÓGICO)
+ *************************************/
+
+Table permissions {
+  id          bigserial [pk]
+  name        varchar(150) [unique, note: 'Slug del permiso, ej: view_partners']
+  description text
+  created_at  timestamp
+  updated_at  timestamp
+}
+
+Table role_permissions {
+  id            bigserial [pk]
+  company_id    bigint [not null, ref: > companies.id, note: 'Tenant scope']
+  role          user_role
+  permission_id bigint [not null, ref: > permissions.id]
+
+  created_at    timestamp
+  updated_at    timestamp
+}
+
+Table user_permissions {
+  id            bigserial [pk]
+  user_id       bigint [not null, ref: > users.id]
+  company_id    bigint [not null, ref: > companies.id]
+  permission_id bigint [not null, ref: > permissions.id]
+
+  created_at    timestamp
+  updated_at    timestamp
+}
+
+/*************************************
+ * USUARIOS / SOCIOS / DRIVERS
+ * (IMPLEMENTADO)
+ *************************************/
+
+Table users {
+  id                   bigserial [pk]
+  company_id           bigint [ref: > companies.id, note: 'NULL para SUPERADMIN']
+  partner_id           bigint [ref: > partners.id, note: 'Solo si aplica']
+  role                 user_role
+
+  name                 varchar(150)
+  email                varchar(150) [unique]
+  email_verified_at    timestamp
+  password             varchar(255)
+  remember_token       varchar(100)
+
+  is_active            boolean
+  must_change_password boolean
+
+  created_at           timestamp
+  updated_at           timestamp
+}
+
+Table partners {
+  id            bigserial [pk]
+  company_id    bigint [not null, ref: > companies.id]
+
+  name          varchar(150)
+  code          varchar(50)  [note: 'Código interno único por compañía (NOT NULL)']
+  tax_id        varchar(50)  [note: 'RUC u otro identificador fiscal']
+  is_active     boolean
+  driver_quota  int          [note: 'Cupo máximo de conductores para este socio (NULL = usar driver_quota_default)']
+
+  created_at    timestamp
+  updated_at    timestamp
+}
+
+Table drivers {
+  id             bigserial [pk]
+  company_id     bigint [not null, ref: > companies.id]
+  partner_id     bigint [not null, ref: > partners.id]
+  user_id        bigint [ref: > users.id, note: 'Cuenta para app móvil (si aplica)']
+
+  full_name      varchar(150)
+  phone          varchar(50)
+  license_number varchar(100)
+  is_active      boolean
+
+  created_at     timestamp
+  updated_at     timestamp
+}
+
+/*************************************
+ * VEHÍCULOS
+ * (DISEÑO, PENDIENTE DE IMPLEMENTAR)
+ *************************************/
+
+Table vehicles {
+  id            bigserial [pk]
+  company_id    bigint [not null, ref: > companies.id]
+  partner_id    bigint [not null, ref: > partners.id]
+
+  plate         varchar(20) [unique]
+  model         varchar(100)
+  capacity      int
+  is_active     boolean
+
+  created_at    timestamp
+  updated_at    timestamp
+}
+
+/*************************************
+ * CORPORATIVOS Y PASAJEROS
+ * (DISEÑO, PENDIENTE)
+ *************************************/
+
+Table corporates {
+  id            bigserial [pk]
+  company_id    bigint [not null, ref: > companies.id]
+
+  name          varchar(150)
+  tax_id        varchar(50)
+  contact_name  varchar(150)
+  contact_email varchar(150)
+  is_active     boolean
+
+  created_at    timestamp
+  updated_at    timestamp
+}
+
+Table passengers {
+  id              bigserial [pk]
+  company_id      bigint [not null, ref: > companies.id]
+  corporate_id    bigint [not null, ref: > corporates.id]
+
+  full_name       varchar(150)
+  employee_code   varchar(80)
+  document_id     varchar(80)
+
+  home_address    text
+  home_lat        decimal(10,7)
+  home_lng        decimal(10,7)
+
+  shift_code      varchar(50)
+  is_active       boolean
+
+  created_at      timestamp
+  updated_at      timestamp
+}
+
+/*************************************
+ * RUTAS Y DEFINICIONES
+ * (DISEÑO, PENDIENTE)
+ *************************************/
+
+Table routes {
+  id              bigserial [pk]
+  company_id      bigint [not null, ref: > companies.id]
+
+  name            varchar(150)   // Ej: "Guasmo"
+  description     text
+  zone_label      varchar(100)   [note: 'Etiqueta interna de zona / sector']
+
+  is_active       boolean
+  created_at      timestamp
+  updated_at      timestamp
+}
+
+Table route_definitions {
+  id                      bigserial [pk]
+  company_id              bigint [not null, ref: > companies.id]
+  route_id                bigint [not null, ref: > routes.id]
+  corporate_id            bigint [not null, ref: > corporates.id]
+  partner_id              bigint [not null, ref: > partners.id]
+  driver_id               bigint [ref: > drivers.id]
+
+  version                 int     [not null, note: '1,2,3... por combinación lógica']
+  is_active               boolean
+  previous_definition_id  bigint [ref: > route_definitions.id, note: 'Cadena de versiones']
+
+  direction               run_direction
+  reference_time          time [note: 'Hora de referencia (entrada/salida)']
+
+  billing_code            varchar(50)
+  base_fare_amount        numeric(10,2)
+
+  created_at              timestamp
+  created_by_user_id      bigint [ref: > users.id]
+}
+
+Table route_definition_passengers {
+  id                      bigserial [pk]
+  route_definition_id     bigint [not null, ref: > route_definitions.id]
+  passenger_id            bigint [not null, ref: > passengers.id]
+
+  pickup_order            int
+  planned_pickup_time     time
+  pickup_address          text
+  pickup_lat              decimal(10,7)
+  pickup_lng              decimal(10,7)
+
+  is_active               boolean
+
+  created_at              timestamp
+  created_by_user_id      bigint [ref: > users.id]
+}
+
+/*************************************
+ * RUNS (SNAPSHOT DIARIO)
+ * (DISEÑO, PENDIENTE)
+ *************************************/
+
+Table runs {
+  id                      bigserial [pk]
+  company_id              bigint [not null, ref: > companies.id]
+  route_definition_id     bigint [not null, ref: > route_definitions.id]
+
+  service_date            date        [not null]
+  status                  run_status
+
+  partner_id              bigint [not null, ref: > partners.id]
+  driver_id               bigint [ref: > drivers.id]
+  vehicle_id              bigint [ref: > vehicles.id]
+
+  fare_amount             numeric(10,2)
+  route_billing_code_snap varchar(50)
+
+  manifest_snapshot       text [note: 'JSON con lista de pasajeros / orden / horas para este día']
+
+  created_at              timestamp
+  created_by_user_id      bigint [ref: > users.id]
+}
+
+/*************************************
+ * EVENTOS Y TELEMETRÍA
+ * (DISEÑO, PENDIENTE)
+ *************************************/
+
+Table run_events {
+  id                            bigserial [pk]
+  company_id                    bigint [not null, ref: > companies.id]
+  run_id                        bigint [not null, ref: > runs.id]
+  route_definition_passenger_id bigint [ref: > route_definition_passengers.id]
+  passenger_id                  bigint [ref: > passengers.id]
+
+  event_type      event_type
+  incident_type   incident_type
+  source          actor_source   [note: 'Quién originó el evento']
+
+  occurred_at     timestamp
+  lat             decimal(10,7)
+  lng             decimal(10,7)
+  wait_seconds    int
+  notes           text
+  photo_url       text
+
+  created_by_driver_id bigint [ref: > drivers.id]
+  created_at      timestamp
+}
+
+Table gps_points {
+  id              bigserial [pk]
+  run_id          bigint [not null, ref: > runs.id]
+
+  recorded_at     timestamp
+  lat             decimal(10,7)
+  lng             decimal(10,7)
+  speed_kmh       numeric(6,2)
+
+  created_at      timestamp
+}
