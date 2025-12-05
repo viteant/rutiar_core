@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Traits\Activatable;
+use App\Models\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Corporate extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToCompany, Activatable;
 
     protected $table = 'corporates';
 

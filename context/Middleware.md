@@ -1,39 +1,31 @@
-Middleware
-==========
+# Middleware
 
-Resumen
--------
-Descripciones de los middlewares definidos en `app/Http/Middleware` y su comportamiento.
+## Http/Middleware/ResolveTenantFromUser.php
 
-Listado
--------
+*Middleware que resuelve la compañía (tenant) a partir del usuario autenticado y la inyecta en la app y en la request.*
 
-### app/Http/Middleware/EnsurePasswordIsChanged.php
-- Método principal: handle(Request $request, Closure $next): Response
-- Propósito: bloquear peticiones de usuarios que tienen `must_change_password = true` excepto rutas explícitas relacionadas con autenticación y cambio de contraseña.
-- Comportamiento:
-  - Si no hay usuario autenticado -> pasa al siguiente.
-  - Si `must_change_password` es false -> pasa al siguiente.
-  - Permite rutas: `api/auth/me`, `api/auth/logout`, `api/auth/change-password`.
-  - Para cualquier otra ruta devuelve 423 con código 'PASSWORD_CHANGE_REQUIRED' y mensaje indicando que debe cambiar contraseña.
+Funciones:
+- `handle(Request $request, Closure $next): Response` - Obtiene el usuario autenticado. Si no hay usuario, continúa sin cambios. Si el usuario es SUPERADMIN, limpia cualquier instancia previa de tenant (`app()->forgetInstance('tenant')`) y setea `tenant` a `null` en los atributos de la request. Para otros usuarios, obtiene `company` desde la relación del usuario; si no existe o está inactiva, aborta con 403 y mensaje `Company is not active or not assigned.`. Si es válida, registra la compañía en el contenedor (`app()->instance('tenant', $company)`) y la adjunta a la request (`$request->attributes->set('tenant', $company)`), luego continúa la cadena de middleware.
 
-### app/Http/Middleware/ResolveTenantFromUser.php
-- Método: handle(Request $request, Closure $next): Response
-- Propósito: resolver el tenant (Company) desde el usuario autenticado y exponerlo en el contenedor de la app y en los atributos de la request.
-- Comportamiento:
-  - Si no hay usuario autenticado -> pasa.
-  - Si usuario SUPERADMIN -> `tenant` se resuelve a null (app()->forgetInstance('tenant')).
-  - Si usuario normal: obtiene `$company = $user->company`; si company no existe o `!is_active` aborta 403; registra `app()->instance('tenant', $company)` y setea `request->attributes->set('tenant', $company)`.
+---
 
-### app/Http/Middleware/EnsureUserIsActive.php
-- Método: handle(Request $request, Closure $next): Response
-- Propósito: bloquear usuarios desactivados.
-- Comportamiento:
-  - Si no hay usuario -> pasa.
-  - Si `$user->is_active` es false -> responde 403 con código 'USER_INACTIVE'.
-  - Si está activo -> pasa la request.
+## Http/Middleware/EnsureUserIsActive.php
 
-Notas
------
-- Estos middlewares implementan seguridad multi-tenant y políticas de acceso centralizadas (usuario/empresa activa, cambio obligatorio de contraseña, tenant resolution).
+*Middleware que bloquea el acceso a usuarios inactivos incluso si poseen un token válido.*
 
+Funciones:
+- `handle(Request $request, Closure $next): Response` - Obtiene el usuario autenticado. Si no hay usuario, permite continuar. Si el usuario existe y `is_active` es `false`, devuelve una respuesta JSON 403 con `message: 'User is inactive.'` y `code: 'USER_INACTIVE'`. En caso contrario, deja pasar la request al siguiente middleware/controlador.
+
+---
+
+## Http/Middleware/EnsurePasswordIsChanged.php
+
+*Middleware que obliga a los usuarios marcados con `must_change_password` a cambiar su contraseña antes de acceder al resto de rutas protegidas.*
+
+Funciones:
+- `handle(Request $request, Closure $next): Response` - Obtiene el usuario autenticado. Si no hay usuario, permite continuar. Si el usuario no tiene el flag `must_change_password`, permite continuar. Si sí lo tiene, permite únicamente el acceso a las rutas `api/auth/me`, `api/auth/logout` y `api/auth/change-password` (métodos expuestos para ver su perfil y cambiar contraseña). Para cualquier otra ruta, devuelve respuesta JSON 423 con `message: 'Debes cambiar tu contraseña antes de continuar.'` y `code: 'PASSWORD_CHANGE_REQUIRED'`.
+
+---
+
+Notas:
+- Estos middlewares se combinan para implementar seguridad: inactividad de usuario, requisito de cambio de contraseña y resolución de tenant antes de ejecutar controladores.

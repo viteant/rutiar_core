@@ -1,20 +1,13 @@
-Mail
-====
+# Mail/CompanyAdminInvitationMail.php
 
-Resumen
--------
-Descripción de las Mailable definidas en `app/Mail`.
+*Mailable para enviar la invitación y credenciales iniciales a un nuevo COMPANY_ADMIN.*
 
-### app/Mail/CompanyAdminInvitationMail.php
-- Propósito: enviar un correo al administrador de la compañía con la contraseña temporal y detalles de acceso.
-- Constructor: public function __construct(public Company $company, public User $user, public string $temporaryPassword)
-- Métodos:
-  - public function build(): self
-    - Define subject 'Acceso a Rutiar - Panel de Empresa'
-    - Usa plantilla markdown `emails.company_admin_invitation` y pasa `company`, `user` y `temporaryPassword` al view.
+Funciones:
+- `__construct(Company $company, User $user, string $temporaryPassword): void` - Recibe la compañía a la que pertenece el admin, el usuario creado y la contraseña temporal generada por el comando `rutiar:create-company-admin`. Expone estas propiedades como públicas para su uso en la vista.
+- `build(): self` - Construye el correo estableciendo el subject `'Acceso a Rutiar - Panel de Empresa'` y usando la vista markdown `emails.company_admin_invitation`, a la que pasa las variables `company`, `user` y `temporaryPassword` para renderizar el contenido del email.
 
-Notas
------
-- La clase usa `Queueable` y `SerializesModels`.
-- La plantilla markdown debe existir en `resources/views/emails/company_admin_invitation.blade.php` (o similar) para renderizar el mensaje.
-
+Qué se puede enviar:
+- Correo de invitación a un nuevo administrador de compañía, incluyendo:
+  - Datos básicos de la compañía (nombre, código, etc.).
+  - Usuario al que se le otorga acceso (nombre, email).
+  - Contraseña temporal generada para el primer acceso, con la expectativa de que sea cambiada en el primer login.

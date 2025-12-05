@@ -1,41 +1,32 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Company;
 
+use App\Http\Controllers\BaseApiController;
+use App\Http\Requests\Company\UpdateRolePermissionsRequest;
+use App\Http\Requests\Company\UpdateUserPermissionsRequest;
 use App\Models\Company;
 use App\Models\Permission;
 use App\Models\RolePermission;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Foundation\Validation\ValidatesRequests;
+use Illuminate\Support\Collection;
 
-class CompanyPermissionController extends Controller
+class CompanyPermissionController extends BaseApiController
 {
-
     /**
      * List all available permissions in the system.
      *
      * Restricted to COMPANY_ADMIN of the current company.
+     *
      * @throws AuthorizationException
      */
-    public function availablePermissions(Request $request): JsonResponse
+    public function availablePermissions(): JsonResponse
     {
-        /** @var User $user */
-        $user = $request->user();
+        $company = $this->resolveCompanyOrAbort('manageRolePermissions');
 
-        /** @var Company|null $company */
-        $company = $user->company;
-
-        if (!$company) {
-            abort(403);
-        }
-
-        $this->authorize('manageRolePermissions', $company);
-
+        // $company no se usa directamente, pero la policy ya validó contexto tenant.
         $permissions = Permission::query()
             ->orderBy('name')
             ->get(['id', 'name', 'description']);
@@ -47,30 +38,24 @@ class CompanyPermissionController extends Controller
 
     /**
      * List role permissions for the current company grouped by role.
+     *
      * @throws AuthorizationException
      */
-    public function listRolePermissions(Request $request): JsonResponse
+    public function listRolePermissions(): JsonResponse
     {
-        /** @var User $user */
-        $user = $request->user();
-
-        /** @var Company|null $company */
-        $company = $user->company;
-
-        if (!$company) {
-            abort(403);
-        }
-
-        $this->authorize('manageRolePermissions', $company);
+        $company = $this->resolveCompanyOrAbort('manageRolePermissions');
 
         $rolePermissions = RolePermission::query()
             ->where('company_id', $company->id)
             ->with('permission:id,name')
             ->get()
             ->groupBy('role')
-            ->map(function ($items) {
-                /** @var \Illuminate\Support\Collection $items */
-                return $items->pluck('permission.name')->sort()->values()->all();
+            ->map(function (Collection $items) {
+                return $items
+                    ->pluck('permission.name')
+                    ->sort()
+                    ->values()
+                    ->all();
             });
 
         return response()->json([
@@ -82,21 +67,12 @@ class CompanyPermissionController extends Controller
      * Update role permissions for a specific role in the current company.
      *
      * This replaces the entire permission set for that role in this company.
+     *
      * @throws AuthorizationException
      */
-    public function updateRolePermissions(string $role, Request $request): JsonResponse
+    public function updateRolePermissions(string $role, UpdateRolePermissionsRequest $request): JsonResponse
     {
-        /** @var User $user */
-        $user = $request->user();
-
-        /** @var Company|null $company */
-        $company = $user->company;
-
-        if (!$company) {
-            abort(403);
-        }
-
-        $this->authorize('manageRolePermissions', $company);
+        $company = $this->resolveCompanyOrAbort('manageRolePermissions');
 
         // No tiene sentido permitir modificar SUPERADMIN aquí.
         $validRoles = [
@@ -110,26 +86,9 @@ class CompanyPermissionController extends Controller
             abort(422, 'Role not allowed for company-level permission management.');
         }
 
-        $validated = $request->validate([
-            'permissions' => ['array'],
-            'permissions.*' => ['string', 'distinct'],
-        ]);
+        $permissionNames = $request->validated()['permissions'] ?? [];
 
-        /** @var array<string> $permissionNames */
-        $permissionNames = $validated['permissions'] ?? [];
-
-        $permissions = Permission::query()
-            ->whereIn('name', $permissionNames)
-            ->pluck('id', 'name');
-
-        // Validar que todos los nombres enviados existan
-        $unknownNames = array_diff($permissionNames, $permissions->keys()->all());
-
-        if (!empty($unknownNames)) {
-            return response()->json([
-                'message' => 'Unknown permissions: ' . implode(', ', $unknownNames),
-            ], 422);
-        }
+        $permissions = $this->resolvePermissionsOrFail($permissionNames);
 
         // Reemplazar set completo para ese rol en esta compañía
         RolePermission::query()
@@ -152,23 +111,14 @@ class CompanyPermissionController extends Controller
 
     /**
      * Show role-based and user-specific permissions for a given user.
+     *
      * @throws AuthorizationException
      */
-    public function showUserPermissions(int $userId, Request $request): JsonResponse
+    public function showUserPermissions(int $userId): JsonResponse
     {
-        /** @var User $authUser */
-        $authUser = $request->user();
+        $company = $this->resolveCompanyOrAbort('manageUserPermissions');
 
-        /** @var Company|null $company */
-        $company = $authUser->company;
-
-        if (!$company) {
-            abort(403);
-        }
-
-        $this->authorize('manageUserPermissions', $company);
-
-        /** @var User|null $targetUser */
+        /** @var User $targetUser */
         $targetUser = User::query()->findOrFail($userId);
 
         // El usuario objetivo debe pertenecer a la misma compañía
@@ -211,21 +161,12 @@ class CompanyPermissionController extends Controller
      * Replace user-specific permissions for a given user within the company.
      *
      * These are additive overrides on top of role permissions.
+     *
      * @throws AuthorizationException
      */
-    public function updateUserPermissions(int $userId, Request $request): JsonResponse
+    public function updateUserPermissions(int $userId, UpdateUserPermissionsRequest $request): JsonResponse
     {
-        /** @var User $authUser */
-        $authUser = $request->user();
-
-        /** @var Company|null $company */
-        $company = $authUser->company;
-
-        if (!$company) {
-            abort(403);
-        }
-
-        $this->authorize('manageUserPermissions', $company);
+        $company = $this->resolveCompanyOrAbort('manageUserPermissions');
 
         /** @var User $targetUser */
         $targetUser = User::query()->findOrFail($userId);
@@ -239,25 +180,9 @@ class CompanyPermissionController extends Controller
             abort(403, 'Cannot manage permissions for SUPERADMIN users.');
         }
 
-        $validated = $request->validate([
-            'permissions' => ['array'],
-            'permissions.*' => ['string', 'distinct'],
-        ]);
+        $permissionNames = $request->validated()['permissions'] ?? [];
 
-        /** @var array<string> $permissionNames */
-        $permissionNames = $validated['permissions'] ?? [];
-
-        $permissions = Permission::query()
-            ->whereIn('name', $permissionNames)
-            ->pluck('id', 'name');
-
-        $unknownNames = array_diff($permissionNames, $permissions->keys()->all());
-
-        if (!empty($unknownNames)) {
-            return response()->json([
-                'message' => 'Unknown permissions: ' . implode(', ', $unknownNames),
-            ], 422);
-        }
+        $permissions = $this->resolvePermissionsOrFail($permissionNames);
 
         // Reemplazar overrides de este usuario en esta compañía
         $targetUser->userPermissions()
@@ -274,5 +199,49 @@ class CompanyPermissionController extends Controller
         return response()->json([
             'message' => 'User permissions updated.',
         ]);
+    }
+
+    /**
+     * Resolve current company (tenant) and authorize given ability.
+     *
+     * @throws AuthorizationException
+     */
+    protected function resolveCompanyOrAbort(string $ability): Company
+    {
+        $company = $this->tenant();
+
+        if (!$company instanceof Company) {
+            abort(403);
+        }
+
+        $this->authorize($ability, $company);
+
+        return $company;
+    }
+
+    /**
+     * Map permission names to IDs or return 422 if some are unknown.
+     *
+     * @param array<string> $permissionNames
+     */
+    protected function resolvePermissionsOrFail(array $permissionNames): Collection
+    {
+        if ($permissionNames === []) {
+            return collect();
+        }
+
+        $permissions = Permission::query()
+            ->whereIn('name', $permissionNames)
+            ->pluck('id', 'name');
+
+        $unknownNames = array_diff($permissionNames, $permissions->keys()->all());
+
+        if (!empty($unknownNames)) {
+            return response()->json([
+                'message' => 'Unknown permissions: ' . implode(', ', $unknownNames),
+            ], 422)->throwResponse();
+        }
+
+        return $permissions;
     }
 }

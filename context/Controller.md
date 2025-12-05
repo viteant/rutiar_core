@@ -1,117 +1,178 @@
-Controllers
-===========
+# Http/Controllers/Controller.php
 
-Resumen
--------
-Este documento lista los controladores definidos en `app/Http/Controllers` y describe sus métodos clave, responsabilidades y comportamientos principales (autorizaciones, validaciones y respuestas JSON).
+*Clase base abstracta de controladores, provee helpers de autorización y validación.*
 
-Listado y funciones clave
--------------------------
+Traits:
+- `AuthorizesRequests` - Proporciona el método `authorize()` y helpers para verificar políticas de autorización.
+- `ValidatesRequests` - Proporciona el método `validate()` y helpers para validar peticiones HTTP.
 
-### app/Http/Controllers/Controller.php
-- Clase base abstracta que usa traits `AuthorizesRequests` y `ValidatesRequests`.
+Funciones:
+- (Heredadas a través de los traits; esta clase no define métodos adicionales propios.)
 
-### app/Http/Controllers/CorporateController.php
-- index(Request $request): JsonResponse
-  - Autoriza 'viewAny' sobre Corporate.
-  - Filtra `is_active` y por `company_id` (si no es SUPERADMIN se limita al tenant del usuario).
-  - Retorna JSON con 'data' => colección de corporates.
+---
 
-- store(Request $request): JsonResponse
-  - Autoriza 'create'.
-  - Define reglas de validación (name, tax_id, contact, is_active).
-  - Si SUPERADMIN permite enviar `company_id` explicitamente; si no, asigna `company_id` del usuario.
-  - Crea el `Corporate` y devuelve 201 con el recurso.
+# Http/Controllers/BaseApiController.php
 
-- show(Request $request, Corporate $corporate): JsonResponse
-  - Autoriza 'view' y devuelve el corporate.
+*Controlador base para endpoints API multi-tenant que trabajan con usuario autenticado y compañía (tenant).* 
 
-- update(Request $request, Corporate $corporate): JsonResponse
-  - Autoriza 'update', valida campos `sometimes`, actualiza y retorna el recurso.
+Traits:
+- (Ninguno directamente; hereda traits desde `Controller`.)
 
-- destroy(Request $request, Corporate $corporate): JsonResponse
-  - Autoriza 'delete' y desactiva (`is_active = false`) en lugar de borrar, devuelve 204.
+Funciones:
+- `protected function user(): User` - Devuelve el usuario autenticado actual (`request()->user()`).
+- `protected function tenant(): ?Company` - Devuelve la compañía (tenant) resuelta por el middleware `ResolveTenantFromUser` desde `request()->attributes->get('tenant')`.
+- `protected function isSuperAdmin(): bool` - Indica si el usuario actual tiene rol `SUPERADMIN`.
+- `protected function withCompanyId(array $data): array` - Normaliza el `company_id` dentro de un array de datos: si es SUPERADMIN respeta el `company_id` suministrado; si no, fuerza el `company_id` del tenant actual.
 
-### app/Http/Controllers/VehicleController.php
-- index(Request $request): JsonResponse
-  - Autoriza 'viewAny' sobre Vehicle.
-  - Carga relaciones `company` y `partner`, filtra por tenant y opcional `partner_id`.
+---
 
-- store(Request $request): JsonResponse
-  - Autoriza 'create'.
-  - Reglas base (plate único, model, capacity).
-  - Si SUPERADMIN puede indicar `company_id`, además `partner_id` debe pertenecer a company.
-  - Verifica integridad de partner y crea Vehicle, devuelve 201.
+# Http/Controllers/Auth/AuthController.php
 
-- show(Request $request, Vehicle $vehicle): JsonResponse
-  - Autoriza 'view', carga relaciones y devuelve recurso.
+*Controlador de autenticación; gestiona login multi-tenant, obtención de perfil, logout y cambio de contraseña.*
 
-- update(Request $request, Vehicle $vehicle): JsonResponse
-  - Autoriza 'update'.
-  - Validaciones con Rule::unique ignorando el id actual.
-  - Valida que `partner_id` pertenezca al mismo tenant, actualiza y devuelve recurso.
+Traits:
+- (Hereda `AuthorizesRequests` y `ValidatesRequests` desde `Controller`.)
 
-- destroy(Request $request, Vehicle $vehicle): JsonResponse
-  - Autoriza 'delete', desactiva (is_active=false) y devuelve 204.
+Funciones:
+- `login(LoginRequest $request): JsonResponse` - Valida credenciales, aplica rate limiting, verifica estado (`is_active`), resuelve `company_code` para usuarios no SUPERADMIN, genera token Sanctum (revocando tokens previos con el mismo `device_name`) y devuelve `token`, `token_type` y datos del `user` (incluyendo compañía asociada si aplica).
+- `me(Request $request): JsonResponse` - Devuelve JSON con `user` autenticado y `tenant` (compañía actual o null para SUPERADMIN) tomado de los atributos de la request.
+- `logout(Request $request): JsonResponse` - Elimina todos los `personal_access_tokens` (`$user->tokens()->delete()`) del usuario autenticado y devuelve mensaje de confirmación.
+- `changePassword(ChangePasswordRequest $request): JsonResponse` - Verifica la contraseña actual (`current_password`), actualiza `password`, marca `must_change_password=false` y devuelve mensaje de éxito.
+- `protected ensureIsNotRateLimited(Request $request): void` - Comprueba que no se haya excedido el número de intentos de login (máximo 5) usando `RateLimiter`; si lo supera lanza `abort(429, ...)`.
+- `protected throttleKey(Request $request): string` - Construye la clave de rate limiting a partir de `email` e IP (`email|ip`).
 
-### app/Http/Controllers/CompanyPermissionController.php
-- availablePermissions(Request $request): JsonResponse
-  - Lista todas las filas de `permissions` ordenadas. Requiere permiso `manageRolePermissions` (policy `CompanyPermissionPolicy::manageRolePermissions`).
+---
 
-- listRolePermissions(Request $request): JsonResponse
-  - Devuelve `role_permissions` del company agrupadas por rol.
+# Http/Controllers/Company/CompanyPermissionController.php
 
-- updateRolePermissions(string $role, Request $request): JsonResponse
-  - Reemplaza permisos de un rol para la compañía actual.
-  - Valida roles permitidos (no SUPERADMIN), valida nombres de permisos y persiste `RolePermission`.
+*Controlador para gestionar permisos (roles y usuarios) a nivel de compañía.*
 
-- showUserPermissions(int $userId, Request $request): JsonResponse
-  - Muestra permisos role-based y overrides user-specific para un usuario del mismo company.
+Traits:
+- (Hereda traits desde `BaseApiController` → `Controller`.)
 
-- updateUserPermissions(int $userId, Request $request): JsonResponse
-  - Reemplaza overrides de permisos para un usuario dentro de la compañía.
+Funciones:
+- `availablePermissions(): JsonResponse` - Lista todos los permisos registrados (`permissions` table) y retorna `id`, `name`, `description` para cada uno. Requiere autorización `manageRolePermissions` sobre la compañía actual.
+- `listRolePermissions(): JsonResponse` - Devuelve un JSON agrupando permisos por rol (`role_permissions` table) para la compañía actual. Cada entrada contiene el rol como clave y un array de nombres de permisos.
+- `updateRolePermissions(string $role, UpdateRolePermissionsRequest $request): JsonResponse` - Reemplaza el conjunto de permisos asociado a un rol (`COMPANY_ADMIN`, `COMPANY_USER`, `PARTNER_ADMIN`, `DRIVER`) en la compañía actual. Valida que los nombres de permisos existan en BD y devuelve error 422 si hay nombres desconocidos.
+- `showUserPermissions(int $userId): JsonResponse` - Muestra para un usuario dado: id, rol, permisos derivados de rol (`role_permissions`) y overrides específicos (`user_permissions`) dentro de la compañía actual. Verifica que el usuario objetivo pertenezca a la misma compañía.
+- `updateUserPermissions(int $userId, UpdateUserPermissionsRequest $request): JsonResponse` - Reemplaza los permisos específicos de un usuario (overrides) en la compañía actual. Asegura que no se puedan gestionar permisos de usuarios `SUPERADMIN` y valida nombres de permisos.
+- `protected resolveCompanyOrAbort(string $ability): Company` - Resuelve la compañía actual (`tenant()`), lanza 403 si no existe y llama a `authorize($ability, $company)`; devuelve la compañía autorizada.
+- `protected resolvePermissionsOrFail(array $permissionNames): Collection` - Mapea una lista de nombres de permisos a sus IDs; si alguno no existe, responde con JSON 422 y mensaje `Unknown permissions: ...`.
 
-### app/Http/Controllers/DriverController.php
-- index, store, show, update, destroy: JsonResponses
-  - Lógica similar a otros controladores: autorización con policy `DriverPolicy`, validaciones, tenant scoping,
-  - `store` y `update` incluyen validación de cuotas de drivers por partner (partner->effectiveDriverQuota()).
+---
 
-### app/Http/Controllers/CompanyConfigController.php
-- show(Request $request): JsonResponse
-  - Verifica tenant y permiso `viewSettings`. Crea config por defecto si no existe. Devuelve estructura con campos `planning_cutoff_time`, `default_waiting_minutes`, `allow_driver_reorder`, `driver_quota_default`, `settings`.
+# Http/Controllers/Company/CompanyConfigController.php
 
-- update(Request $request): JsonResponse
-  - Autoriza `updateSettings`. Valida campos y persiste cambios en `CompanyConfig` del tenant.
+*Controlador para ver y actualizar la configuración operativa de una compañía.*
 
-### app/Http/Controllers/PartnerController.php
-- index, store, show, update, destroy: JsonResponses
-  - `store` y `update` validan `company_id` (solo SUPERADMIN puede enviar `company_id`), crean/actualizan Partner y respetan tenant.
-  - `destroy` desactiva (`is_active = false`).
+Traits:
+- (Hereda traits desde `BaseApiController` → `Controller`.)
 
-### app/Http/Controllers/PassengerController.php
-- index, store, show, update, destroy: JsonResponses
-  - Similar a otros: tenant scoping, validaciones (geolocalización, corporate perteneciente al tenant), soft-delete (is_active=false).
+Funciones:
+- `show(): JsonResponse` - Obtiene o crea la configuración (`CompanyConfig`) de la compañía actual con valores por defecto si no existe y devuelve un JSON serializado (`planning_cutoff_time`, `default_waiting_minutes`, `allow_driver_reorder`, `driver_quota_default`, `settings`). Autoriza con `viewSettings` sobre la compañía actual.
+- `update(UpdateCompanyConfigRequest $request): JsonResponse` - Valida y actualiza campos de `CompanyConfig` para la compañía actual (`planning_cutoff_time`, `default_waiting_minutes`, `allow_driver_reorder`, `driver_quota_default`, `settings`). Autoriza con `updateSettings`.
+- `protected resolveCompanyOrAbort(string $ability): Company` - Igual que en `CompanyPermissionController`, resuelve tenant y autoriza.
+- `protected getOrCreateConfig(Company $company): CompanyConfig` - Devuelve la configuración asociada a la compañía, creándola con valores por defecto si no existe.
+- `protected serializeConfig(CompanyConfig $config): array` - Convierte el modelo de configuración en un arreglo listo para respuesta JSON (formatea hora a `H:i:s`).
 
-### app/Http/Controllers/Auth/AuthController.php
-- login(LoginRequest $request): JsonResponse
-  - Lógica de login con RateLimiter (5 intentos), verificación de password, verificación de `is_active`.
-  - Multi-tenant: SUPERADMIN puede entrar sin `company_code`; usuarios normales requieren `company_code` que debe coincidir con `user->company_id`.
-  - Crea token personal (`createToken($deviceName)`), devuelve token y datos del usuario + company.
+---
 
-- me(Request $request): JsonResponse
-  - Devuelve `user` y `tenant` (resuelto por middleware).
+# Http/Controllers/Company/PassengerController.php
 
-- logout(Request $request): JsonResponse
-  - Borra tokens del usuario actual.
+*Controlador para CRUD de pasajeros dentro del contexto de una compañía.*
 
-- changePassword(ChangePasswordRequest $request): JsonResponse
-  - Verifica `current_password`, actualiza password (hashed), setea `must_change_password=false`.
+Traits:
+- (Hereda traits desde `BaseApiController` → `Controller`.)
 
-- Métodos protegidos para rate limiting: ensureIsNotRateLimited, throttleKey
+Funciones:
+- `index(Request $request): JsonResponse` - Lista pasajeros activos (`Passenger::active()`) con relación `corporate`, filtrando por `company_id` según tenant (o por query param si es SUPERADMIN) y opcionalmente por `corporate_id`.
+- `store(StorePassengerRequest $request): JsonResponse` - Crea un pasajero validando datos básicos y asegurando que el `corporate_id` pertenezca a la misma compañía (`Corporate::where('company_id', $companyId)`). Devuelve pasajero creado con `corporate` cargado.
+- `show(Passenger $passenger): JsonResponse` - Devuelve un pasajero concreto con la relación `corporate` cargada, respetando la policy `view`.
+- `update(UpdatePassengerRequest $request, Passenger $passenger): JsonResponse` - Actualiza campos del pasajero y, si se cambia `corporate_id`, verifica que el corporate pertenezca a la misma compañía. Devuelve el pasajero actualizado con `corporate` cargado.
+- `destroy(Passenger $passenger): JsonResponse` - Desactiva (soft delete) al pasajero a través del método `deactivate()` y devuelve 204.
 
+---
 
-Notas generales
---------------
-- Todos los controladores devuelven JSON y usan policies para autorización.
-- En endpoints que modifican o acceden a recursos tenant-scoped hay checks explícitos para asegurar coincidencia de `company_id` a menos que el usuario sea SUPERADMIN.
+# Http/Controllers/Company/CorporateController.php
 
+*Controlador para CRUD de cuentas corporativas (clientes corporativos) por compañía.*
+
+Traits:
+- (Hereda traits desde `BaseApiController` → `Controller`.)
+
+Funciones:
+- `index(Request $request): JsonResponse` - Lista corporates activos (`Corporate::active()`), filtrando por tenant o por `company_id` si es SUPERADMIN.
+- `store(StoreCorporateRequest $request): JsonResponse` - Crea un corporate usando `withCompanyId()` para fijar `company_id` según el contexto (tenant o explícito para SUPERADMIN). Devuelve entidad creada.
+- `show(Corporate $corporate): JsonResponse` - Devuelve un corporate específico tras pasar la policy `view`.
+- `update(UpdateCorporateRequest $request, Corporate $corporate): JsonResponse` - Actualiza nombre, tax_id y datos de contacto con la data validada.
+- `destroy(Corporate $corporate): JsonResponse` - Desactiva el corporate usando `deactivate()` (soft delete) y devuelve 204.
+
+---
+
+# Http/Controllers/Transport/PartnerController.php
+
+*Controlador para CRUD de partners (socios de transporte) dentro del contexto multi-tenant.*
+
+Traits:
+- (Hereda traits desde `BaseApiController` → `Controller`.)
+
+Funciones:
+- `index(Request $request): JsonResponse` - Lista partners ordenados por `name`; si es SUPERADMIN puede filtrar por `company_id`, si no, se restringe a la compañía del tenant.
+- `store(StorePartnerRequest $request): JsonResponse` - Crea un partner con campos `name`, `code`, `tax_id`, `is_active`, `driver_quota` y resuelve `company_id` vía `withCompanyId()`. Devuelve datos resumidos del partner.
+- `show(Partner $partner): JsonResponse` - Devuelve un partner específico filtrando campos básicos (id, company_id, name, code, tax_id, is_active, driver_quota, timestamps).
+- `update(Partner $partner, UpdatePartnerRequest $request): JsonResponse` - Actualiza campos de partner con datos validados.
+- `destroy(Partner $partner): JsonResponse` - Desactiva el partner (`is_active=false`) y guarda; devuelve 204.
+
+---
+
+# Http/Controllers/Transport/DriverController.php
+
+*Controlador para CRUD de drivers (conductores) con soporte de cuotas por partner y filtros por compañía/partner.*
+
+Traits:
+- `HasTransportIndexFilters` - Trait que aplica filtros estándar por `company_id` y `partner_id` a consultas de transporte.
+- (Hereda traits desde `BaseApiController` → `Controller`.)
+
+Funciones:
+- `index(Request $request): JsonResponse` - Lista drivers activos (`Driver::active()`), cargando relaciones `company`, `partner`, `user`, y aplica filtros de compañía y partner usando el trait.
+- `store(StoreDriverRequest $request): JsonResponse` - Crea un driver con datos validados, resuelve `company_id` vía `withCompanyId()`, busca el `Partner` correspondiente dentro de la compañía y verifica que no se exceda la cuota de drivers (`assertPartnerHasDriverQuota`). Crea el registro y devuelve el driver con relaciones cargadas.
+- `show(Driver $driver): JsonResponse` - Devuelve driver específico con `company`, `partner` y `user` cargados, tras pasar la policy `view`.
+- `update(UpdateDriverRequest $request, Driver $driver): JsonResponse` - Actualiza datos del driver y, si cambia de partner, vuelve a verificar la cuota de drivers (`assertPartnerHasDriverQuota`). Devuelve driver actualizado con relaciones.
+- `destroy(Driver $driver): JsonResponse` - Desactiva el driver mediante `deactivate()` y devuelve 204.
+- `protected assertPartnerHasDriverQuota(Partner $partner): void` - Lanza `HttpResponseException` 422 si el partner ha alcanzado su cuota de drivers efectivos (`effectiveDriverQuota()` vs `drivers()->count()`).
+
+---
+
+# Http/Controllers/Transport/VehicleController.php
+
+*Controlador para CRUD de vehículos asociados a partners y compañías, con filtros por compañía y partner.*
+
+Traits:
+- `HasTransportIndexFilters` - Reutiliza filtros por `company_id` y `partner_id`.
+- (Hereda traits desde `BaseApiController` → `Controller`.)
+
+Funciones:
+- `index(Request $request): JsonResponse` - Lista vehículos activos (`Vehicle::active()`) con relaciones `company` y `partner`, aplicando filtros de tenant y partner.
+- `store(StoreVehicleRequest $request): JsonResponse` - Crea vehículo resolviendo `company_id` con `withCompanyId()`. Devuelve vehículo creado con relaciones.
+- `show(Vehicle $vehicle): JsonResponse` - Devuelve vehículo específico con `company` y `partner` cargados.
+- `update(UpdateVehicleRequest $request, Vehicle $vehicle): JsonResponse` - Actualiza datos del vehículo (incluyendo `partner_id` si se cambia) y devuelve entidad actualizada con relaciones.
+- `destroy(Vehicle $vehicle): JsonResponse` - Desactiva el vehículo usando `deactivate()` y devuelve 204.
+
+---
+
+# Http/Controllers/Transport/Concerns/HasTransportIndexFilters.php
+
+*Trait reusable para aplicar filtros estándar por compañía y partner en índices de transporte.*
+
+Funciones:
+- `protected applyCompanyFilter(Builder $query, Request $request): Builder` - Si es SUPERADMIN y existe `company_id` en la request, filtra por ese id; en caso contrario, impone el `company_id` del tenant actual (abortando 403 si no hay tenant).
+- `protected applyPartnerFilter(Builder $query, Request $request): Builder` - Si `partner_id` viene en la request, filtra la consulta por ese partner.
+
+---
+
+## Traits (sección de resumen)
+
+### Desde Controladores
+- `AuthorizesRequests` - Trait de Laravel que proporciona helpers de autorización (`authorize`, `authorizeForUser`, etc.).
+- `ValidatesRequests` - Trait de Laravel que agrupa helpers para validación de requests.
+- `HasTransportIndexFilters` - Trait propio que aplica filtros por `company_id` y `partner_id` a consultas Eloquent para recursos de transporte.

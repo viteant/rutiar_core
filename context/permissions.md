@@ -1,58 +1,52 @@
-permissions.php (exportado a markdown)
-=====================================
+# config/permissions.php
 
-Este archivo refleja el contenido de `config/permissions.php`:
+*Registro global de permisos de la aplicación (fuente de verdad para la tabla `permissions`).*
 
-return [
-    'permissions' => [
-        [ 'name' => 'view_company_settings', 'description' => 'View company configuration, cutoff times and global rules.' ],
-        [ 'name' => 'update_company_settings', 'description' => 'Update company configuration, cutoff times and global rules.' ],
+Funciones (permisos definidos):
+- `view_company_settings` - View company configuration, cutoff times and global rules.
+- `update_company_settings` - Update company configuration, cutoff times and global rules.
 
-        [ 'name' => 'view_partners', 'description' => 'View partners list and partner details.' ],
-        [ 'name' => 'create_partner', 'description' => 'Create new partners.' ],
-        [ 'name' => 'update_partner', 'description' => 'Edit partner information.' ],
-        [ 'name' => 'delete_partner', 'description' => 'Delete or deactivate partners.' ],
-        [ 'name' => 'manage_partner_drivers', 'description' => 'Assign or remove drivers from partners.' ],
+- `view_partners` - View partners list and partner details.
+- `create_partner` - Create new partners.
+- `update_partner` - Edit partner information.
+- `delete_partner` - Delete or deactivate partners.
+- `manage_partner_drivers` - Assign or remove drivers from partners.
 
-        [ 'name' => 'view_drivers', 'description' => 'View drivers list and details.' ],
-        [ 'name' => 'create_driver', 'description' => 'Create new drivers.' ],
-        [ 'name' => 'update_driver', 'description' => 'Edit driver information.' ],
-        [ 'name' => 'deactivate_driver', 'description' => 'Deactivate drivers.' ],
+- `view_drivers` - View drivers list and details.
+- `create_driver` - Create new drivers.
+- `update_driver` - Edit driver information.
+- `deactivate_driver` - Deactivate drivers.
 
-        [ 'name' => 'view_route_definitions', 'description' => 'View route templates and their configuration.' ],
-        [ 'name' => 'create_route_definition', 'description' => 'Create new route templates.' ],
-        [ 'name' => 'update_route_definition', 'description' => 'Edit existing route templates.' ],
-        [ 'name' => 'delete_route_definition', 'description' => 'Delete or deactivate route templates.' ],
+- `view_route_definitions` - View route templates and their configuration.
+- `create_route_definition` - Create new route templates.
+- `update_route_definition` - Edit existing route templates.
+- `delete_route_definition` - Delete or deactivate route templates.
 
-        [ 'name' => 'view_runs', 'description' => 'View runs for the company routes.' ],
-        [ 'name' => 'approve_run', 'description' => 'Approve planned runs.' ],
-        [ 'name' => 'cancel_run', 'description' => 'Cancel runs before execution.' ],
-        [ 'name' => 'force_close_run', 'description' => 'Force close runs in exceptional cases.' ],
+- `view_runs` - View runs for the company routes.
+- `approve_run` - Approve planned runs.
+- `cancel_run` - Cancel runs before execution.
+- `force_close_run` - Force close runs in exceptional cases.
 
-        [ 'name' => 'view_manifests', 'description' => 'View manifests with passengers and stops.' ],
-        [ 'name' => 'export_manifests', 'description' => 'Export manifests for control or external tools.' ],
+- `view_manifests` - View manifests with passengers and stops.
+- `export_manifests` - Export manifests for control or external tools.
 
-        [ 'name' => 'view_billing', 'description' => 'View billing and pre-invoices generated from runs.' ],
-        [ 'name' => 'view_reports', 'description' => 'Access operational and KPI reports.' ],
+- `view_billing` - View billing and pre-invoices generated from runs.
+- `view_reports` - Access operational and KPI reports.
 
-        [ 'name' => 'manage_company_role_permissions', 'description' => 'Manage role permissions for this company.' ],
-        [ 'name' => 'manage_company_user_permissions', 'description' => 'Manage user-specific permissions for this company.' ],
+- `manage_company_role_permissions` - Manage role permissions for this company.
+- `manage_company_user_permissions` - Manage user-specific permissions for this company.
 
-        [ 'name' => 'view_vehicles', 'description' => 'View vehicles list and details.' ],
-        [ 'name' => 'create_vehicle', 'description' => 'Create new vehicles.' ],
-        [ 'name' => 'update_vehicle', 'description' => 'Edit vehicle information.' ],
-        [ 'name' => 'deactivate_vehicle', 'description' => 'Deactivate vehicles (soft delete).' ],
+- `view_vehicles` - View vehicles list and details.
+- `create_vehicle` - Create new vehicles.
+- `update_vehicle` - Edit vehicle information.
+- `deactivate_vehicle` - Deactivate vehicles (soft delete).
 
-        [ 'name' => 'view_corporates', 'description' => 'View corporates list and details.' ],
-        [ 'name' => 'create_corporate', 'description' => 'Create new corporates.' ],
-        [ 'name' => 'update_corporate', 'description' => 'Edit corporate information.' ],
-        [ 'name' => 'deactivate_corporate', 'description' => 'Deactivate corporates (soft delete).' ],
+- `view_corporates` - View corporates list and details.
+- `create_corporate` - Create new corporates.
+- `update_corporate` - Edit corporate information.
+- `deactivate_corporate` - Deactivate corporates (soft delete).
 
-        [ 'name' => 'view_passengers', 'description' => 'View passengers list and details.' ],
-        [ 'name' => 'create_passenger', 'description' => 'Create new passengers.' ],
-        [ 'name' => 'update_passenger', 'description' => 'Edit passenger information.' ],
-        [ 'name' => 'deactivate_passenger', 'description' => 'Deactivate passengers (soft delete).' ],
-    ],
-];
-
-(El contenido anterior es una exportación literal del archivo de configuración `config/permissions.php`.)
+- `view_passengers` - View passengers list and details.
+- `create_passenger` - Create new passengers.
+- `update_passenger` - Edit passenger information.
+- `deactivate_passenger` - Deactivate passengers (soft delete).

@@ -1,68 +1,84 @@
-Policies
-========
+# Policies/CompanyPermissionPolicy.php
 
-Resumen
--------
-Descripción de todas las policies en `app/Policies` y métodos disponibles.
+*Policy que controla quién puede gestionar permisos y configuración de compañía.*
 
-### app/Policies/CorporatePolicy.php
-- viewAny(User $user): bool
-- view(User $user, Corporate $corporate): bool
-- create(User $user): bool
-- update(User $user, Corporate $corporate): bool
-- delete(User $user, Corporate $corporate): bool
+Funciones:
+- `manageRolePermissions(User $user, Company $company): bool` - Devuelve `true` solo si el usuario NO es SUPERADMIN, tiene `company_id` igual al de la compañía y posee el permiso `manage_company_role_permissions`.
+- `manageUserPermissions(User $user, Company $company): bool` - Similar a `manageRolePermissions`, pero exige el permiso `manage_company_user_permissions`.
+- `viewSettings(User $user, Company $company): bool` - Permite ver configuración si el usuario pertenece a la compañía, no es SUPERADMIN y tiene el permiso `view_company_settings`.
+- `updateSettings(User $user, Company $company): bool` - Permite actualizar configuración si el usuario pertenece a la compañía, no es SUPERADMIN y tiene el permiso `update_company_settings`.
 
-Comportamiento: SUPERADMIN siempre true; usuarios no-tenant requieren permisos `view_corporates`, `create_corporate`, `update_corporate`, `deactivate_corporate` según acción; además verifican que `user->company_id === corporate->company_id` para operaciones tenant-scoped.
+---
 
-### app/Policies/CompanyPermissionPolicy.php
-- manageRolePermissions(User $user, Company $company): bool
-- manageUserPermissions(User $user, Company $company): bool
-- viewSettings(User $user, Company $company): bool
-- updateSettings(User $user, Company $company): bool
+# Policies/PassengerPolicy.php
 
-Comportamiento: SUPERADMIN explícitamente NO puede gestionar permisos a nivel de compañía mediante estas policies (devuelven false para SUPERADMIN). Requiere que el user pertenezca a la misma company y tenga permisos correspondientes `manage_company_role_permissions`, `manage_company_user_permissions`, `view_company_settings`, `update_company_settings`.
+*Policy para controlar acceso a pasajeros.*
 
-### app/Policies/PassengerPolicy.php
-- viewAny(User $user): bool
-- view(User $user, Passenger $passenger): bool
-- create(User $user): bool
-- update(User $user, Passenger $passenger): bool
-- delete(User $user, Passenger $passenger): bool
+Funciones:
+- `viewAny(User $user): bool` - Permite listar pasajeros si el usuario es SUPERADMIN o, si no, tiene `company_id` no nulo y el permiso `view_passengers`.
+- `view(User $user, Passenger $passenger): bool` - Permite ver un pasajero si el usuario es SUPERADMIN o si pertenece a la misma compañía (`company_id` coincide) y tiene `view_passengers`.
+- `create(User $user): bool` - Permite crear pasajeros si es SUPERADMIN o si pertenece a una compañía y tiene `create_passenger`.
+- `update(User $user, Passenger $passenger): bool` - Permite actualizar si es SUPERADMIN o si pertenece a la misma compañía y tiene `update_passenger`.
+- `delete(User $user, Passenger $passenger): bool` - Permite desactivar (DELETE) si es SUPERADMIN o si pertenece a la misma compañía y tiene `deactivate_passenger`.
 
-Comportamiento: similar a CorporatePolicy pero con permisos `view_passengers`, `create_passenger`, `update_passenger`, `deactivate_passenger`.
+---
 
-### app/Policies/PartnerPolicy.php
-- viewAny(User $user): bool
-- view(User $user, Partner $partner): bool
-- create(User $user): bool
-- update(User $user, Partner $partner): bool
-- delete(User $user, Partner $partner): bool
+# Policies/PartnerPolicy.php
 
-Comportamiento: SUPERADMIN bypass; para usuarios tenant verifica `inSameTenant` (mismo company_id) y permisos `view_partners`, `create_partner`, `update_partner`, `delete_partner`.
+*Policy para controlar acceso y operaciones sobre partners.*
 
-### app/Policies/DriverPolicy.php
-- viewAny(User $user): bool
-- view(User $user, Driver $driver): bool
-- create(User $user): bool
-- update(User $user, Driver $driver): bool
-- delete(User $user, Driver $driver): bool
+Funciones:
+- `viewAny(User $user): bool` - Permite listar partners si el usuario es SUPERADMIN o si tiene `company_id` y el permiso `view_partners`.
+- `view(User $user, Partner $partner): bool` - Permite ver partner si es SUPERADMIN o si `inSameTenant($user, $partner)` y tiene `view_partners`.
+- `create(User $user): bool` - Permite crear partner si es SUPERADMIN o si tiene `company_id` y el permiso `create_partner`.
+- `update(User $user, Partner $partner): bool` - Permite actualizar si es SUPERADMIN o si `inSameTenant` y tiene `update_partner`.
+- `delete(User $user, Partner $partner): bool` - Permite desactivar si es SUPERADMIN o si `inSameTenant` y tiene `delete_partner`.
+- `protected inSameTenant(User $user, Partner $partner): bool` - Helper que comprueba que `user.company_id` sea igual a `partner.company_id` y no nulo.
 
-Comportamiento: SUPERADMIN bypass; verifica tenant match y permisos `view_drivers`, `create_driver`, `update_driver`, `deactivate_driver`.
+---
 
-### app/Policies/VehiclePolicy.php
-- viewAny(User $user): bool
-- view(User $user, Vehicle $vehicle): bool
-- create(User $user): bool
-- update(User $user, Vehicle $vehicle): bool
-- delete(User $user, Vehicle $vehicle): bool
+# Policies/DriverPolicy.php
 
-Comportamiento: SUP ERADMIN bypass; permisos `view_vehicles`, `create_vehicle`, `update_vehicle`, `deactivate_vehicle`.
+*Policy para controlar acceso y operaciones sobre drivers.*
 
-### app/Policies/Traits/HandlesTenantAuthorization.php
-- protected function sameTenant(User $user, Model $model): bool
-  - Utilidad común para comprobar si `model->company_id` coincide con `user->company_id`; SUPERADMIN bypass.
+Funciones:
+- `viewAny(User $user): bool` - Permite listar drivers si es SUPERADMIN o si `company_id` no es nulo y tiene `view_drivers`.
+- `view(User $user, Driver $driver): bool` - Permite ver driver si es SUPERADMIN o si `company_id` coincide con `driver.company_id` y tiene `view_drivers`.
+- `create(User $user): bool` - Permite crear driver si es SUPERADMIN o si tiene `company_id` y el permiso `create_driver`.
+- `update(User $user, Driver $driver): bool` - Permite actualizar si es SUPERADMIN o si la compañía coincide y tiene `update_driver`.
+- `delete(User $user, Driver $driver): bool` - Permite "eliminar" (desactivar) el driver si es SUPERADMIN o si pertenece a la misma compañía y tiene `deactivate_driver`.
 
-Notas
------
-- Las policies mezclan comprobaciones de rol/permiso con restricciones tenant (company_id). Esto permite granularidad por compañía y overrides por usuario.
+---
 
+# Policies/VehiclePolicy.php
+
+*Policy para controlar acceso y operaciones sobre vehículos.*
+
+Funciones:
+- `viewAny(User $user): bool` - Permite listar vehículos si es SUPERADMIN o si `company_id` no es nulo y tiene `view_vehicles`.
+- `view(User $user, Vehicle $vehicle): bool` - Permite ver vehículo si es SUPERADMIN o si `company_id` coincide con la del vehículo y tiene `view_vehicles`.
+- `create(User $user): bool` - Permite crear vehículo si es SUPERADMIN o si tiene `company_id` y `create_vehicle`.
+- `update(User $user, Vehicle $vehicle): bool` - Permite actualizar si es SUPERADMIN o si `company_id` coincide y tiene `update_vehicle`.
+- `delete(User $user, Vehicle $vehicle): bool` - Permite desactivar vehículo (DELETE) si es SUPERADMIN o si `company_id` coincide y tiene `deactivate_vehicle`.
+
+---
+
+# Policies/CorporatePolicy.php
+
+*Policy para controlar acceso y operaciones sobre corporates (clientes corporativos).* 
+
+Funciones:
+- `viewAny(User $user): bool` - Permite listar corporates si es SUPERADMIN o si `company_id` no es nulo y tiene `view_corporates`.
+- `view(User $user, Corporate $corporate): bool` - Permite ver corporate si es SUPERADMIN o si `company_id` coincide con `corporate.company_id` y tiene `view_corporates`.
+- `create(User $user): bool` - Permite crear corporate si es SUPERADMIN o si tiene `company_id` y `create_corporate`.
+- `update(User $user, Corporate $corporate): bool` - Permite actualizar si es SUPERADMIN o si `company_id` coincide y tiene `update_corporate`.
+- `delete(User $user, Corporate $corporate): bool` - Permite desactivar corporate si es SUPERADMIN o si `company_id` coincide y tiene `deactivate_corporate`.
+
+---
+
+# Policies/Traits/HandlesTenantAuthorization.php
+
+*Trait de soporte para policies que necesitan verificar pertenencia a un mismo tenant (company).* 
+
+Funciones:
+- `protected sameTenant(User $user, Model $model): bool` - Devuelve `true` si el usuario es SUPERADMIN (bypass) o si el modelo tiene propiedad `company_id` y `user.company_id` no es nulo y coincide con `model.company_id`. Devuelve `false` si el modelo no expone `company_id` o si los `company_id` no coinciden.

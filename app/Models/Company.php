@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property string timezone
  * @property boolean is_active
  * @property integer $id
+ * @property CompanyConfig $config
  */
 class Company extends Model
 {

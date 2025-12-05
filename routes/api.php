@@ -1,13 +1,13 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\CompanyConfigController;
-use App\Http\Controllers\CompanyPermissionController;
-use App\Http\Controllers\CorporateController;
-use App\Http\Controllers\DriverController;
-use App\Http\Controllers\PartnerController;
-use App\Http\Controllers\PassengerController;
-use App\Http\Controllers\VehicleController;
+use App\Http\Controllers\Company\CompanyConfigController;
+use App\Http\Controllers\Company\CompanyPermissionController;
+use App\Http\Controllers\Company\CorporateController;
+use App\Http\Controllers\Company\PassengerController;
+use App\Http\Controllers\Transport\DriverController;
+use App\Http\Controllers\Transport\PartnerController;
+use App\Http\Controllers\Transport\VehicleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 

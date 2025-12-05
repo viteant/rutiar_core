@@ -17,6 +17,7 @@ use Illuminate\Support\Carbon;
  * @property int $max_drivers_per_partner
  * @property bool $allow_driver_reorder
  * @property array|null $settings
+ * @property integer $driver_quota_default
  */
 class CompanyConfig extends Model
 {
