@@ -7,24 +7,22 @@ use Illuminate\Database\Eloquent\Model;
 
 trait HandlesTenantAuthorization
 {
-    /**
-     * Check if user and model belong to the same tenant.
-     * SUPERADMIN bypasses tenant restriction.
-     */
     protected function sameTenant(User $user, Model $model): bool
     {
         if ($user->isSuperAdmin()) {
             return true;
         }
 
-        if (!property_exists($model, 'company_id') && !isset($model->company_id)) {
+        $modelCompanyId = $model->getAttribute('company_id');
+
+        if ($modelCompanyId === null) {
             return false;
         }
 
-        if (!$user->company_id) {
+        if ($user->company_id === null) {
             return false;
         }
 
-        return (int) $model->company_id === (int) $user->company_id;
+        return (int) $modelCompanyId === (int) $user->company_id;
     }
 }

@@ -127,13 +127,21 @@ class DriverController extends BaseApiController
      */
     protected function assertPartnerHasDriverQuota(Partner $partner): void
     {
+        // Superadmin bypasses partner driver quota restrictions
+        if ($this->isSuperAdmin()) {
+            return;
+        }
+
         $quota = $partner->effectiveDriverQuota();
 
         if ($quota === null) {
             return;
         }
 
-        $currentDriverCount = $partner->drivers()->count();
+        // If drivers use Activatable, quota should consider only active drivers
+        $currentDriverCount = $partner->drivers()
+            ->active() // si el modelo Driver usa el trait Activatable
+            ->count();
 
         if ($currentDriverCount >= $quota) {
             throw new HttpResponseException(
