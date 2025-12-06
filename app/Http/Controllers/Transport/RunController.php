@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Transport;
 
 use App\Enums\RunStatus;
 use App\Http\Controllers\BaseApiController;
+use App\Http\Requests\Transport\GenerateRunFromDefinitionRequest;
 use App\Http\Requests\Transport\StoreRunRequest;
 use App\Http\Requests\Transport\UpdateRunRequest;
+use App\Models\RouteDefinition;
 use App\Models\Run;
+use App\Services\RunGenerationService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -134,5 +137,55 @@ class RunController extends BaseApiController
         $run->save();
 
         return response()->json($run);
+    }
+
+    /**
+     * @throws AuthorizationException
+     */
+    public function generateFromDefinition(
+        GenerateRunFromDefinitionRequest $request,
+        RunGenerationService $service
+    ): JsonResponse {
+        $this->authorize('create', Run::class);
+
+        $data = $request->validated();
+
+        $definitionQuery = RouteDefinition::query();
+
+        if (! $this->isSuperAdmin()) {
+            $tenant = $this->tenantOrFail();
+            $definitionQuery->where('company_id', $tenant->id);
+        }
+
+        /** @var RouteDefinition $definition */
+        $definition = $definitionQuery->findOrFail($data['route_definition_id']);
+
+        $driver = null;
+        $vehicle = null;
+
+        if (isset($data['driver_id'])) {
+            $driver = $definition->company
+                ->drivers()
+                ->where('id', $data['driver_id'])
+                ->first();
+        }
+
+        if (isset($data['vehicle_id'])) {
+            $vehicle = $definition->company
+                ->vehicles()
+                ->where('id', $data['vehicle_id'])
+                ->first();
+        }
+
+        $run = $service->generateFromDefinition(
+            $definition,
+            $data['service_date'],
+            $driver,
+            $vehicle,
+            $data['fare_amount'] ?? null,
+            $this->user()
+        );
+
+        return response()->json($run, 201);
     }
 }

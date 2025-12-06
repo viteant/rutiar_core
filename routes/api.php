@@ -11,6 +11,8 @@ use App\Http\Controllers\Transport\RouteController;
 use App\Http\Controllers\Transport\RouteDefinitionController;
 use App\Http\Controllers\Transport\RouteDefinitionPassengerController;
 use App\Http\Controllers\Transport\RunController;
+use App\Http\Controllers\Transport\RunEventController;
+use App\Http\Controllers\Transport\RunGpsPointController;
 use App\Http\Controllers\Transport\VehicleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -59,6 +61,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('runs', RunController::class)
         ->only(['index', 'show', 'store', 'update']);
 
+    Route::post('runs/from-definition', [RunController::class, 'generateFromDefinition'])
+        ->name('runs.from-definition');
+
     Route::post('runs/{run}/approve', [RunController::class, 'approve'])
         ->name('runs.approve');
 
@@ -67,6 +72,19 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('runs/{run}/force-close', [RunController::class, 'forceClose'])
         ->name('runs.force-close');
+
+    Route::get('runs/{run}/events', [RunEventController::class, 'index'])
+        ->name('runs.events.index');
+
+    Route::post('runs/{run}/events', [RunEventController::class, 'store'])
+        ->name('runs.events.store');
+
+    // GPS points por run
+    Route::get('runs/{run}/gps-points', [RunGpsPointController::class, 'index'])
+        ->name('runs.gps-points.index');
+
+    Route::post('runs/{run}/gps-points', [RunGpsPointController::class, 'store'])
+        ->name('runs.gps-points.store');
 
     Route::get('/tenant-example', function (Request $request) {
         return response()->json([
